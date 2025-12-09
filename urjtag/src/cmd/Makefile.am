@@ -26,46 +26,46 @@ include $(top_srcdir)/Makefile.rules
 noinst_LTLIBRARIES = libcmd.la
 
 always_enabled_cmd_files = \
-	cmd_frequency.c \
-	cmd_cable.c \
-	cmd_reset.c \
-	cmd_discovery.c \
-	cmd_idcode.c \
-	cmd_detect.c \
-	cmd_detectflash.c \
-	cmd_help.c \
-	cmd_quit.c \
-	cmd_scan.c \
-	cmd_signal.c \
-	cmd_salias.c \
-	cmd_bit.c \
-	cmd_register.c \
-	cmd_initbus.c \
-	cmd_print.c \
-	cmd_part.c \
-	cmd_bus.c \
-	cmd_instruction.c \
-	cmd_shift.c \
-	cmd_dr.c \
-	cmd_get.c \
-	cmd_test.c \
-	cmd_debug.c \
-	cmd_shell.c \
-	cmd_set.c \
-	cmd_endian.c \
-	cmd_peekpoke.c \
-	cmd_pod.c \
-	cmd_readmem.c \
-	cmd_writemem.c \
-	cmd_flashmem.c \
-	cmd_eraseflash.c \
-	cmd_lockflash.c \
-	cmd_include.c \
-	cmd_addpart.c \
-	cmd_cmd.c \
-	cmd_usleep.c \
-	cmd_bfin.c \
-	cmd_pld.c
+		$(top_srcdir)/src/cmd/cmd_frequency.c \
+		$(top_srcdir)/src/cmd/cmd_cable.c \
+		$(top_srcdir)/src/cmd/cmd_reset.c \
+		$(top_srcdir)/src/cmd/cmd_discovery.c \
+		$(top_srcdir)/src/cmd/cmd_idcode.c \
+		$(top_srcdir)/src/cmd/cmd_detect.c \
+		$(top_srcdir)/src/cmd/cmd_detectflash.c \
+		$(top_srcdir)/src/cmd/cmd_help.c \
+		$(top_srcdir)/src/cmd/cmd_quit.c \
+		$(top_srcdir)/src/cmd/cmd_scan.c \
+		$(top_srcdir)/src/cmd/cmd_signal.c \
+		$(top_srcdir)/src/cmd/cmd_salias.c \
+		$(top_srcdir)/src/cmd/cmd_bit.c \
+		$(top_srcdir)/src/cmd/cmd_register.c \
+		$(top_srcdir)/src/cmd/cmd_initbus.c \
+		$(top_srcdir)/src/cmd/cmd_print.c \
+		$(top_srcdir)/src/cmd/cmd_part.c \
+		$(top_srcdir)/src/cmd/cmd_bus.c \
+		$(top_srcdir)/src/cmd/cmd_instruction.c \
+		$(top_srcdir)/src/cmd/cmd_shift.c \
+		$(top_srcdir)/src/cmd/cmd_dr.c \
+		$(top_srcdir)/src/cmd/cmd_get.c \
+		$(top_srcdir)/src/cmd/cmd_test.c \
+		$(top_srcdir)/src/cmd/cmd_debug.c \
+		$(top_srcdir)/src/cmd/cmd_shell.c \
+		$(top_srcdir)/src/cmd/cmd_set.c \
+		$(top_srcdir)/src/cmd/cmd_endian.c \
+		$(top_srcdir)/src/cmd/cmd_peekpoke.c \
+		$(top_srcdir)/src/cmd/cmd_pod.c \
+		$(top_srcdir)/src/cmd/cmd_readmem.c \
+		$(top_srcdir)/src/cmd/cmd_writemem.c \
+		$(top_srcdir)/src/cmd/cmd_flashmem.c \
+		$(top_srcdir)/src/cmd/cmd_eraseflash.c \
+		$(top_srcdir)/src/cmd/cmd_lockflash.c \
+		$(top_srcdir)/src/cmd/cmd_include.c \
+		$(top_srcdir)/src/cmd/cmd_addpart.c \
+		$(top_srcdir)/src/cmd/cmd_cmd.c \
+		$(top_srcdir)/src/cmd/cmd_usleep.c \
+		$(top_srcdir)/src/cmd/cmd_bfin.c \
+		$(top_srcdir)/src/cmd/cmd_pld.c
 
 libcmd_la_SOURCES = \
 	cmd.h \
@@ -90,9 +90,9 @@ endif
 # defines from config.h.
 all_cmd_files = \
 	$(always_enabled_cmd_files) \
-	cmd_bsdl.c \
-	cmd_stapl.c \
-	cmd_svf.c
+	$(top_srcdir)/src/cmd/cmd_bsdl.c \
+	$(top_srcdir)/src/cmd/cmd_stapl.c \
+	$(top_srcdir)/src/cmd/cmd_svf.c
 
 generated_cmd_list.h: generated_cmd_list.h.stamp ; @true
 generated_cmd_list.h.stamp: $(all_cmd_files)

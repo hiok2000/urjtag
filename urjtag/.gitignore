@@ -80,3 +80,20 @@ Makefile.in
 /src/svf/svf_bison.c
 /src/svf/svf_bison.h
 /src/svf/svf_flex.c
+/bindings/python/setup.py
+*.exe
+*.pyc
+*.whl
+
+#
+# vscode generated directory
+#
+.vs/
+.vscode/
+build/
+
+#
+# python env
+#
+myenv/
+
