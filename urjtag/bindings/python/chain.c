@@ -31,6 +31,7 @@
 #include <urjtag/urjtag.h>
 #include <urjtag/chain.h>
 #include <urjtag/cmd.h>
+#include <urjtag/parse.h>
 
 #include "py_urjtag.h"
 
@@ -910,6 +911,18 @@ urj_pyc_get_register (urj_pychain_t *self, PyObject *args)
     return (PyObject *) reg;
 }
 
+static PyObject *
+urj_pyc_parse_line (urj_pychain_t *self, PyObject *args)
+{
+    char *line;
+    urj_chain_t *urc = self->urchain;
+
+    if (!PyArg_ParseTuple (args, "s",
+                           &line))
+        return NULL;
+
+    return urj_py_chkret (urj_parse_line (urc, line));
+}
 
 static PyMethodDef urj_pyc_methods[] =
 {
@@ -983,6 +996,8 @@ static PyMethodDef urj_pyc_methods[] =
      "burn flash memory with data from a file"},
     {"get_register", (PyCFunction)urj_pyc_get_register, METH_VARARGS,
      "retrieve register object for convenient set_dr/shift_dr use"},
+    {"parse_line", (PyCFunction)urj_pyc_parse_line, METH_VARARGS,
+     "parse a line and sending to cmd run"},
 
     {NULL}                      /* Sentinel */
 };
