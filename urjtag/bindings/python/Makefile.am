@@ -33,3 +33,6 @@ install-data-local:
 
 clean-local:
 	$(RM) -fr build
+
+whl:
+	$(PYTHON) setup.py bdist_wheel
