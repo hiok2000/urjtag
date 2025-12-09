@@ -68,6 +68,8 @@ cmd_addpart_run (urj_chain_t *chain, char *params[])
         return URJ_STATUS_FAIL;
     }
 
+    chain->main_part = chain->parts->len - 1;
+    urj_tap_reset (chain);
     urj_part_parts_set_instruction (chain->parts, "BYPASS");
     urj_tap_chain_shift_instructions (chain);
 
