@@ -1,0 +1,5 @@
+ # Usage: ./jtag addpart_without_detect.script
+ cable ft2232 pid=0x6010 vid=0x403 interface=1 driver=ftdi-mpsse
+ addpart 10
+ include ./epm570t100.script
+ print chain

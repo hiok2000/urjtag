@@ -1,0 +1,4 @@
+# Usage: ./jtag example.script
+cable ft2232 pid=0x6010 vid=0x403 interface=1 driver=ftdi-mpsse
+frequency 1000000
+detect
