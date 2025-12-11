@@ -395,13 +395,16 @@ progress_nl (YYLTYPE *mylloc, YY_EXTRA_TYPE extra)
 {
     int percent;
 
-    if (mylloc->last_line % 10 == 0)
+    if ((mylloc->last_line % 10 == 0) || (mylloc->last_line >= extra->num_lines))
     {
-        percent = ((mylloc->last_line * 100) + 1) / extra->num_lines;
+        if (mylloc->last_line >= extra->num_lines)
+          percent = 100;
+        else
+          percent = ((mylloc->last_line * 100) + 1) / extra->num_lines;
         if (percent <= 1)
             return;             // dont bother printing < 1 %
-        urj_log (URJ_LOG_LEVEL_DETAIL, "\r");
-        urj_log (URJ_LOG_LEVEL_DETAIL, _("Parsing %6d/%d (%3.0d%%)"),
+        
+        urj_log (URJ_LOG_LEVEL_DETAIL, _("Parsing %6d/%d (%3.0d%%)\r"),
                 mylloc->last_line, extra->num_lines, percent);
     }
 }

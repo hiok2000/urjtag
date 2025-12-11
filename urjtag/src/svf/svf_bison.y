@@ -130,19 +130,31 @@ svf_statement
     | HDR NUMBER ths_param_list ';'
       {
         struct ths_params *p = &(priv_data->parser_params.ths_params);
+        int result;
 
         p->number = $2;
-        urj_svf_hxr(generic_dr, p);
+        result = urj_svf_hxr(chain, priv_data, generic_dr, p, &@$);
         urj_svf_free_ths_params(p);
+
+        if (result != URJ_STATUS_OK) {
+          yyerror(&@$, priv_data, chain, "HDR");
+          YYERROR;
+        }
       }
 
     | HIR NUMBER ths_param_list ';'
       {
         struct ths_params *p = &(priv_data->parser_params.ths_params);
+        int result;
 
         p->number = $2;
-        urj_svf_hxr(generic_ir, p);
+        result = urj_svf_hxr(chain, priv_data, generic_ir, p, &@$);
         urj_svf_free_ths_params(p);
+
+        if (result != URJ_STATUS_OK) {
+          yyerror(&@$, priv_data, chain, "HIR");
+          YYERROR;
+        }
       }
 
     | PIOMAP '(' direction IDENTIFIER piomap_rec ')' ';'
@@ -234,7 +246,7 @@ svf_statement
         int result;
 
         p->number = $2;
-        result = urj_svf_txr(generic_dr, p);
+        result = urj_svf_txr(chain, priv_data, generic_dr, p, &@$);
         urj_svf_free_ths_params(p);
 
         if (result != URJ_STATUS_OK) {
@@ -249,7 +261,7 @@ svf_statement
         int result;
 
         p->number = $2;
-        result = urj_svf_txr(generic_ir, p);
+        result = urj_svf_txr(chain, priv_data, generic_ir, p, &@$);
         urj_svf_free_ths_params(p);
 
         if (result != URJ_STATUS_OK) {

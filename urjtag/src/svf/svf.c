@@ -352,7 +352,7 @@ urj_svf_hex2dec (char nibble)
  *   NULL upon error
  */
 static char *
-urj_svf_build_bit_string (char *hex_string, int len)
+urj_svf_build_bit_string_raw (char *hex_string, int len)
 {
     char *bit_string, *bit_string_pos;
     int nibble;
@@ -394,6 +394,45 @@ urj_svf_build_bit_string (char *hex_string, int len)
     return bit_string;
 }
 
+static char *
+urj_svf_build_bit_string (char *head_hex_string, char *hex_string, char *tail_hex_string, 
+                          int head_len,          int len,          int tail_len)
+{
+    char *bit_string;
+    char *tmp_string;
+
+    if (!(bit_string = calloc (head_len + len + tail_len + 1, sizeof (char))))
+    {
+        urj_error_set (URJ_ERROR_OUT_OF_MEMORY, "calloc(%zd,%zd) fails",
+                       (size_t) (len + 1), sizeof (char));
+        return NULL;
+    }
+
+    // head
+    if (head_len > 0) {
+        tmp_string = urj_svf_build_bit_string_raw (head_hex_string, head_len);
+        memcpy(bit_string, tmp_string, head_len);
+        if (tmp_string) free(tmp_string);
+    }
+
+    // body
+    if (len > 0) {
+        tmp_string = urj_svf_build_bit_string_raw (hex_string, len);
+        memcpy(bit_string + head_len, tmp_string, len);
+        if (tmp_string) free(tmp_string);
+    }
+
+    // tail
+    if (tail_len > 0) {
+        tmp_string = urj_svf_build_bit_string_raw (tail_hex_string, tail_len);
+        memcpy(bit_string + head_len + len, tmp_string, tail_len);
+        if (tmp_string) free(tmp_string);
+    }
+
+    bit_string[head_len + len + tail_len] = '\0';
+
+    return bit_string;
+}
 
 /*
  * urj_svf_copy_hex_to_register(hex_string, reg)
@@ -409,11 +448,14 @@ urj_svf_build_bit_string (char *hex_string, int len)
  *   URJ_STATUS_OK, URJ_STATUS_FAIL
  */
 static int
-urj_svf_copy_hex_to_register (char *hex_string, urj_tap_register_t *reg)
+urj_svf_copy_hex_to_register (char *head_hex_string, char *hex_string, char *tail_hex_string, 
+                              int head_len,          int len,          int tail_len, 
+                              urj_tap_register_t *reg)
 {
     char *bit_string;
 
-    if (!(bit_string = urj_svf_build_bit_string (hex_string, reg->len)))
+    if (!(bit_string = urj_svf_build_bit_string (head_hex_string, hex_string, tail_hex_string, 
+                                                 head_len, reg->len, tail_len)))
         return URJ_STATUS_FAIL;
 
     urj_tap_register_init (reg, bit_string);
@@ -444,15 +486,20 @@ urj_svf_copy_hex_to_register (char *hex_string, urj_tap_register_t *reg)
  *   URJ_STATUS_FAIL : tdo and reg do not match or error occurred
  */
 static int
-urj_svf_compare_tdo (urj_svf_parser_priv_t *priv, char *tdo, char *mask,
+urj_svf_compare_tdo (urj_svf_parser_priv_t *priv, 
+                     char *head_tdo,  char *tdo,  char *tail_tdo, 
+                     char *head_mask, char *mask, char *tail_mask,
+                     int head_len,    int len,    int tail_len,
                      urj_tap_register_t *reg, YYLTYPE *loc)
 {
     char *tdo_bit, *mask_bit;
     int pos, mismatch, result = URJ_STATUS_OK;
 
-    if (!(tdo_bit = urj_svf_build_bit_string (tdo, reg->len)))
+    if (!(tdo_bit = urj_svf_build_bit_string (head_tdo, tdo, tail_tdo, 
+                                              head_len, reg->len, tail_len)))
         return URJ_STATUS_FAIL;
-    if (!(mask_bit = urj_svf_build_bit_string (mask, reg->len)))
+    if (!(mask_bit = urj_svf_build_bit_string (head_mask, mask, tail_mask, 
+                                               head_len, reg->len, tail_len)))
     {
         free (tdo_bit);
         return URJ_STATUS_FAIL;
@@ -602,6 +649,77 @@ urj_svf_frequency (urj_chain_t *chain, double freq)
 }
 
 
+int
+urj_svf_htxr (urj_chain_t *chain, urj_svf_parser_priv_t *priv,
+             enum generic_irdr_coding ir_dr, struct ths_params *params,
+             YYLTYPE *loc, int is_hxr)
+{
+    if (params->number != 0.0)
+        urj_warning ( _("command HIR/HDR/TIR/TDR not tested!\n"));
+
+    urj_svf_sxr_t *sxr_params;
+    int result = URJ_STATUS_OK;
+
+    if (is_hxr)
+        sxr_params = (ir_dr == generic_ir) ?
+                        &(priv->hir_params) : &(priv->hdr_params);
+    else
+        sxr_params = (ir_dr == generic_ir) ?
+                        &(priv->tir_params) : &(priv->tdr_params);
+
+    /* remember parameters */
+    urj_svf_remember_param (&sxr_params->params.tdi, params->tdi);
+
+    sxr_params->params.tdo = params->tdo;       /* tdo is not "remembered" */
+
+    urj_svf_remember_param (&sxr_params->params.mask, params->mask);
+
+    urj_svf_remember_param (&sxr_params->params.smask, params->smask);
+
+
+    /* handle length change for MASK and SMASK */
+    if (sxr_params->params.number != params->number)
+    {
+        sxr_params->no_tdi = 1;
+        sxr_params->no_tdo = 1;
+
+        if (!params->mask)
+            if (urj_svf_all_care (&sxr_params->params.mask, params->number)
+                != URJ_STATUS_OK)
+                result = URJ_STATUS_FAIL;
+        if (!params->smask)
+            if (urj_svf_all_care (&sxr_params->params.smask, params->number)
+                != URJ_STATUS_OK)
+                result = URJ_STATUS_FAIL;
+    }
+
+    sxr_params->params.number = params->number;
+
+    /* check consistency */
+    if (sxr_params->no_tdi)
+    {
+        if (!params->tdi)
+        {
+            urj_log (URJ_LOG_LEVEL_ERROR,
+                     _("Error %s: first %s command after length change must have a TDI value.\n"),
+                    "svf", ir_dr == generic_ir ? "HIR/TIR" : "HDR/TDR");
+            result = URJ_STATUS_FAIL;
+        }
+        sxr_params->no_tdi = 0;
+    }
+
+    /* take over responsability for free'ing parameter strings */
+    params->tdi = NULL;
+    params->mask = NULL;
+    params->smask = NULL;
+
+    /* result of consistency check */
+    if (result != URJ_STATUS_OK)
+        return URJ_STATUS_FAIL;
+
+    return result;
+}
+
 /* ***************************************************************************
  * urj_svf_hxr(ir_dr, params)
  *
@@ -618,13 +736,12 @@ urj_svf_frequency (urj_chain_t *chain, double freq)
  *   URJ_STATUS_OK, URJ_STATUS_FAIL
  * ***************************************************************************/
 int
-urj_svf_hxr (enum generic_irdr_coding ir_dr, struct ths_params *params)
+urj_svf_hxr (urj_chain_t *chain, urj_svf_parser_priv_t *priv,
+             enum generic_irdr_coding ir_dr, struct ths_params *params,
+             YYLTYPE *loc)
 {
-    if (params->number != 0.0)
-        urj_warning ( _("command %s not implemented\n"),
-                     ir_dr == generic_ir ? "HIR" : "HDR");
-
-    return URJ_STATUS_OK;
+    int is_hxr = 1;
+    return urj_svf_htxr (chain, priv, ir_dr, params, loc, is_hxr);
 }
 
 #ifdef HAVE_SIGACTION_SA_ONESHOT
@@ -895,23 +1012,43 @@ urj_svf_sxr (urj_chain_t *chain, urj_svf_parser_priv_t *priv,
     /*
      * handle tap registers
      */
+
+    char *h_tdi, *h_tdo, *h_mask, *t_tdi, *t_tdo, *t_mask;
+    int h_len, t_len;
+    h_tdi = (ir_dr == generic_ir) ?
+                     priv->hir_params.params.tdi: priv->hdr_params.params.tdi;
+    h_tdo = (ir_dr == generic_ir) ?
+                     priv->hir_params.params.tdo: priv->hdr_params.params.tdo;
+    h_mask = (ir_dr == generic_ir) ?
+                     priv->hir_params.params.mask: priv->hdr_params.params.mask;
+    t_tdi = (ir_dr == generic_ir) ?
+                     priv->tir_params.params.tdi: priv->tdr_params.params.tdi;
+    t_tdo = (ir_dr == generic_ir) ?
+                     priv->tir_params.params.tdo: priv->tdr_params.params.tdo;
+    t_mask = (ir_dr == generic_ir) ?
+                     priv->tir_params.params.mask: priv->tdr_params.params.mask;
+    h_len = (ir_dr == generic_ir) ?
+                     (int)priv->hir_params.params.number: (int)priv->hdr_params.params.number;
+    t_len = (ir_dr == generic_ir) ?
+                     (int)priv->tir_params.params.number: (int)priv->tdr_params.params.number;
+
     len = (int) sxr_params->params.number;
+    len = h_len + len + t_len;
+
     switch (ir_dr)
     {
     case generic_ir:
         /* is SIR large enough? */
         if (priv->ir->value->len != len)
         {
-            urj_log (URJ_LOG_LEVEL_ERROR,
-                     _("Error %s: SIR command length inconsistent.\n"), "svf");
-            if (loc != NULL)
-            {
-                urj_log (URJ_LOG_LEVEL_ERROR,
-                     _(" in input file between line %d col %d and line %d col %d\n"),
-                     loc->first_line + 1, loc->first_column + 1,
-                     loc->last_line + 1, loc->last_column + 1);
-            }
-            return URJ_STATUS_FAIL;
+            /* length does not match, so install proper registers */
+            urj_tap_register_free (priv->ir->value);
+            priv->ir->value = NULL;
+
+            if (!(priv->ir->value = urj_tap_register_alloc (len)))
+                // retain error state
+                return URJ_STATUS_FAIL;
+
         }
         break;
 
@@ -937,7 +1074,8 @@ urj_svf_sxr (urj_chain_t *chain, urj_svf_parser_priv_t *priv,
     }
 
     /* fill register with value of TDI parameter */
-    if (urj_svf_copy_hex_to_register (sxr_params->params.tdi,
+    if (urj_svf_copy_hex_to_register (h_tdi, sxr_params->params.tdi, t_tdi,
+                                      h_len, (int)sxr_params->params.number, t_len,
                                       ir_dr == generic_ir ? priv->ir->value
                                                           : priv->dr->in)
         != URJ_STATUS_OK)
@@ -955,8 +1093,9 @@ urj_svf_sxr (urj_chain_t *chain, urj_svf_parser_priv_t *priv,
         urj_svf_goto_state (chain, priv->endir);
 
         if (sxr_params->params.tdo)
-            result = urj_svf_compare_tdo (priv, sxr_params->params.tdo,
-                                          sxr_params->params.mask,
+            result = urj_svf_compare_tdo (priv, h_tdo, sxr_params->params.tdo, t_tdo,
+                                          h_mask, sxr_params->params.mask, t_mask,
+                                          h_len, (int)sxr_params->params.number, t_len,
                                           priv->ir->out, loc);
         break;
 
@@ -969,8 +1108,9 @@ urj_svf_sxr (urj_chain_t *chain, urj_svf_parser_priv_t *priv,
         urj_svf_goto_state (chain, priv->enddr);
 
         if (sxr_params->params.tdo)
-            result = urj_svf_compare_tdo (priv, sxr_params->params.tdo,
-                                          sxr_params->params.mask,
+            result = urj_svf_compare_tdo (priv, h_tdo, sxr_params->params.tdo, t_tdo,
+                                          h_mask, sxr_params->params.mask, t_mask,
+                                          h_len, (int)sxr_params->params.number, t_len,
                                           priv->dr->out, loc);
         break;
     }
@@ -1022,9 +1162,11 @@ urj_svf_trst (urj_chain_t *chain, urj_svf_parser_priv_t *priv, int trst_mode)
         trst_cable = 1;
         break;
     case Z:
+        trst_cable = 1;
         unimplemented_mode = "Z";
         break;
     case ABSENT:
+        trst_cable = 1;
         unimplemented_mode = "ABSENT";
         priv->svf_trst_absent = 1;
 
@@ -1075,13 +1217,12 @@ urj_svf_trst (urj_chain_t *chain, urj_svf_parser_priv_t *priv, int trst_mode)
  *   URJ_STATUS_OK, URJ_STATUS_FAIL
  * ***************************************************************************/
 int
-urj_svf_txr (enum generic_irdr_coding ir_dr, struct ths_params *params)
+urj_svf_txr (urj_chain_t *chain, urj_svf_parser_priv_t *priv,
+             enum generic_irdr_coding ir_dr, struct ths_params *params,
+             YYLTYPE *loc)
 {
-    if (params->number != 0.0)
-        urj_warning (_("command %s not implemented\n"),
-                     ir_dr == generic_ir ? "TIR" : "TDR");
-
-    return URJ_STATUS_OK;
+    int is_hxr = 0;
+    return urj_svf_htxr (chain, priv, ir_dr, params, loc, is_hxr);
 }
 
 
@@ -1215,6 +1356,8 @@ urj_svf_run (urj_chain_t *chain, FILE *SVF_FILE, int stop_on_mismatch,
     priv.svf_stop_on_mismatch = stop_on_mismatch;
 
     priv.sir_params = priv.sdr_params = sxr_default;
+    priv.hir_params = priv.hdr_params = sxr_default;
+    priv.tir_params = priv.tdr_params = sxr_default;
 
     priv.endir = priv.enddr = URJ_TAP_STATE_RUN_TEST_IDLE;
 
@@ -1234,6 +1377,7 @@ urj_svf_run (urj_chain_t *chain, FILE *SVF_FILE, int stop_on_mismatch,
     /* select SIR instruction */
     urj_part_set_instruction (priv.part, "SIR");
 
+    num_lines++; // from 0, so add 1
     if (urj_svf_bison_init (&priv, SVF_FILE, num_lines))
     {
         urj_svf_parse (&priv, chain);
@@ -1262,6 +1406,36 @@ urj_svf_run (urj_chain_t *chain, FILE *SVF_FILE, int stop_on_mismatch,
         free (priv.sdr_params.params.mask);
     if (priv.sdr_params.params.smask)
         free (priv.sdr_params.params.smask);
+
+    /* HIR */
+    if (priv.hir_params.params.tdi)
+        free (priv.hir_params.params.tdi);
+    if (priv.hir_params.params.mask)
+        free (priv.hir_params.params.mask);
+    if (priv.hir_params.params.smask)
+        free (priv.hir_params.params.smask);
+    /* HDR */
+    if (priv.hdr_params.params.tdi)
+        free (priv.hdr_params.params.tdi);
+    if (priv.hdr_params.params.mask)
+        free (priv.hdr_params.params.mask);
+    if (priv.hdr_params.params.smask)
+        free (priv.hdr_params.params.smask);
+
+    /* TIR */
+    if (priv.tir_params.params.tdi)
+        free (priv.tir_params.params.tdi);
+    if (priv.tir_params.params.mask)
+        free (priv.tir_params.params.mask);
+    if (priv.tir_params.params.smask)
+        free (priv.tir_params.params.smask);
+    /* TDR */
+    if (priv.tdr_params.params.tdi)
+        free (priv.tdr_params.params.tdi);
+    if (priv.tdr_params.params.mask)
+        free (priv.tdr_params.params.mask);
+    if (priv.tdr_params.params.smask)
+        free (priv.tdr_params.params.smask);
 
     /* restore previous frequency setting, required by SVF spec */
     if (old_frequency != urj_tap_cable_get_frequency (chain->cable))
