@@ -99,10 +99,25 @@ pip install urjtag-2021.3-cp312-cp312-mingw_x86_64_msvcrt_gnu.whl
 urjtag自带的bindings/python生成出来的文件，能在MSYS2中的python使用，但可能无法直接在Windows的python中使用。
 
 # 二次开发
-请看examples目录的.c文件。
+## 在MSYS2中的开发（推荐）
+请看examples目录的example.c文件。可使用静态和动态方式。
 
 另外，如果直接使用urjtag生成出来的jtag.exe，会有较多的依赖（MSYS2的组件）。这里放了一个jtag.c，用下面编译出来的jtag.exe，就能完全不依赖dll。
 ```shell
 cd  examples
 gcc -static -o jtag jtag.c -I"../include" -I"../" -L"../src/.libs" -lurjtag -lftdi1 -lusb-1.0 -lintl -lreadline -lncurses
+```
+## 在Visual Studio 2022中的开发
+无法使用静态库，只能使用动态库
+
+包含目录加入：urjtag/include
+
+附加库目录加入：urjtag/src/.libs
+
+附加依赖项加入：liburjtag.dll.a
+
+# 执行文件依赖
+如果Windows没有安装或找到MSYS2 MINGW64目录，按上面的选项配置，需要以下文件跟exe文件在同一个目录中。
+```
+libftdi1.dll libreadline8.dll libtermcap-0.dll libusb-1.0.dll libwinpthread-1.dll liburjtag-0.dll
 ```
