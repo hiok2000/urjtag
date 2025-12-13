@@ -112,8 +112,13 @@
 Section "UrJTAG executable" SecExe
 
   SetOutPath "$INSTDIR"
-  File src\jtag.exe
-  File inpout32.dll
+  File src\apps\jtag\.libs\jtag.exe
+  File src\.libs\liburjtag-0.dll
+  File D:\msys64\mingw64\bin\libftdi1.dll
+  File D:\msys64\mingw64\bin\libreadline8.dll
+  File D:\msys64\mingw64\bin\libtermcap-0.dll
+  File D:\msys64\mingw64\bin\libusb-1.0.dll
+  File D:\msys64\mingw64\bin\libwinpthread-1.dll
   WriteRegStr HKCU "Software\UrJTAG" "" $INSTDIR
   WriteUninstaller "$INSTDIR\uninst.exe"
 
@@ -144,7 +149,7 @@ Section "Start Menu Entries" SecStartMenu
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\JTAG Shell.lnk" "$INSTDIR\jtag.exe"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Documentation.lnk" "$INSTDIR\doc\UrJTAG.txt"
-    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\uninst.exe"
   !insertmacro MUI_STARTMENU_WRITE_END
 
 SectionEnd
@@ -176,14 +181,16 @@ SectionEnd
 Section "Uninstall"
 
   RMDir /r "$INSTDIR\doc"
-  RMDir /r "$INSTDIR\data"
+  ;RMDir /r "$INSTDIR\data"
   Delete "$INSTDIR\jtag.exe"
   Delete "$INSTDIR\uninst.exe"
-  RMDir /r "$INSTDIR"
+  ;RMDir /r "$INSTDIR"
 
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
+  Delete "$SMPROGRAMS\$StartMenuFolder\JTAG Shell.lnk"
+  Delete "$SMPROGRAMS\$StartMenuFolder\Documentation.lnk"
   Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
-  RMDir "$SMPROGRAMS\$StartMenuFolder"
+  RMDir /r "$SMPROGRAMS\$StartMenuFolder"
 
   DeleteRegKey /ifempty HKCU "Software\UrJTAG"
 

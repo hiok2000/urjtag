@@ -121,3 +121,9 @@ gcc -static -o jtag jtag.c -I"../include" -I"../" -L"../src/.libs" -lurjtag -lft
 ```
 libftdi1.dll libreadline8.dll libtermcap-0.dll libusb-1.0.dll libwinpthread-1.dll liburjtag-0.dll
 ```
+# 生成安装文件
+请参考UrJTAG.nsi文件，里面有说明
+```shell
+pacman -S mingw-w64-x86_64-nsis
+makensis UrJTAG.nsi
+```
