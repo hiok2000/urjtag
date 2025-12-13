@@ -85,4 +85,7 @@ urj_log_level_t urj_string_log_level (const char *slevel);
  */
 const char *urj_log_level_string (urj_log_level_t level);
 
+typedef int (*func_p)(const char *fmt, va_list ap);
+void urj_set_log_state (urj_log_level_t level, func_p out_vprintf, func_p err_vprintf);
+
 #endif /* URJ_LOG_H */

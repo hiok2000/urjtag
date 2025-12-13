@@ -242,3 +242,12 @@ urj_log_error_describe (urj_log_level_t level)
 
     urj_error_reset ();
 }
+
+void urj_set_log_state (urj_log_level_t level, func_p out_vprintf, func_p err_vprintf)
+{
+    urj_log_state.level = level;
+    if (out_vprintf)
+        urj_log_state.out_vprintf = out_vprintf;
+    if (err_vprintf)
+        urj_log_state.err_vprintf = err_vprintf;
+}
